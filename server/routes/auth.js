@@ -30,7 +30,7 @@ router.post("/register", async (req, res) => {
     // Insert user
     const newUser = await pool.query(
       "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING user_id, username, email",
-      [username, email, hashedPassword]
+      [username, email, hashedPassword],
     );
 
     res.status(201).json({
@@ -102,7 +102,7 @@ router.post("/login", async (req, res) => {
 
     // Generate JWT
     const token = jwt.sign({ user_id: user.user_id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
+      expiresIn: "7d",
     });
 
     res.status(200).json({ message: "Login successful!", token });

@@ -4,6 +4,8 @@ import {
   generateInterviewFeedback,
 } from "../services/OpenAIService.js";
 
+import pool from "../config/db.js";
+import crypto from "crypto";
 const TOTAL_QUESTIONS = 5;
 
 // ==============================
@@ -14,9 +16,10 @@ async function startInterview(req, res) {
     const role = req.body?.role || "Software Developer";
 
     const firstQuestion = await generateEasyQuestion(role, 1, []);
-
+    const sessionId = crypto.randomUUID();
     return res.json({
       success: true,
+      sessionId,
       questionNumber: 1,
       totalQuestions: TOTAL_QUESTIONS,
       isFinished: false,
@@ -27,7 +30,10 @@ async function startInterview(req, res) {
     });
   } catch (err) {
     console.error("Error starting interview:", err);
-    res.status(500).json({ error: "Failed to start interview" });
+
+    return res.status(500).json({
+      error: "Failed to start interview",
+    });
   }
 }
 
@@ -36,8 +42,14 @@ async function startInterview(req, res) {
 // ==============================
 async function answerInterview(req, res) {
   try {
-    const { questionNumber, userAnswer, role, answers, previousQuestions } =
-      req.body;
+    const {
+      questionNumber,
+      userAnswer,
+      role,
+      answers,
+      previousQuestions,
+      sessionId,
+    } = req.body;
 
     if (!questionNumber || !userAnswer || !role) {
       return res.status(400).json({
@@ -45,11 +57,41 @@ async function answerInterview(req, res) {
       });
     }
 
+    // Get logged-in user from JWT
+    const userId = req.user?.user_id;
+
+    if (!userId) {
+      return res.status(401).json({
+        error: "User authentication required",
+      });
+    }
+
     const updatedAnswers = [...(answers || []), userAnswer];
 
-    // FINISH
+    // The question that belongs to this answer
+    const currentQuestion =
+      previousQuestions?.[questionNumber - 1] || "Interview question";
+
+    // ==============================
+    // FINISH INTERVIEW
+    // ==============================
     if (questionNumber >= TOTAL_QUESTIONS) {
       const feedback = await generateInterviewFeedback(role, updatedAnswers);
+
+      // Save final question + answer + final evaluation
+      await pool.query(
+        `INSERT INTO interviews
+        (user_id, question, answer, ai_feedback, score, session_id)
+        VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          userId,
+          currentQuestion,
+          userAnswer,
+          JSON.stringify(feedback),
+          feedback.score,
+          sessionId,
+        ],
+      );
 
       return res.json({
         success: true,
@@ -58,11 +100,23 @@ async function answerInterview(req, res) {
       });
     }
 
+    // ==============================
+    // SAVE CURRENT QUESTION + ANSWER
+    // ==============================
+    await pool.query(
+      `INSERT INTO interviews
+      (user_id, question, answer, session_id)
+      VALUES ($1, $2, $3, $4)`,
+      [userId, currentQuestion, userAnswer, sessionId],
+    );
+
+    // ==============================
     // NEXT QUESTION
+    // ==============================
     const nextQuestion = await generateEasyQuestion(
       role,
       questionNumber + 1,
-      previousQuestions || []
+      previousQuestions || [],
     );
 
     return res.json({
@@ -76,7 +130,8 @@ async function answerInterview(req, res) {
     });
   } catch (err) {
     console.error("Error answering interview:", err);
-    res.status(500).json({
+
+    return res.status(500).json({
       error: "Failed processing interview answer",
     });
   }

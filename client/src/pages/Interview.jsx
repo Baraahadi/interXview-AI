@@ -1,6 +1,6 @@
 // client/src/pages/Interview.jsx
 import React, { useState } from "react";
-import api from "../utils/axiosInstance";
+import api from "../api/axiosInstance";
 import ChatContainer from "../components/ChatContainer";
 import InputArea from "../components/InputArea";
 import Sidebar from "../components/Sidebar";
@@ -16,11 +16,11 @@ export default function Interview() {
   const [questionNumber, setQuestionNumber] = useState(0);
   const [answers, setAnswers] = useState([]);
   const [previousQuestions, setPreviousQuestions] = useState([]);
+  const [sessionId, setSessionId] = useState(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [finalFeedback, setFinalFeedback] = useState(null);
   const [typedFeedback, setTypedFeedback] = useState("");
-
   const TOTAL_QUESTIONS = 5;
   const [jobRole, setJobRole] = useState("Frontend Developer");
 
@@ -37,7 +37,9 @@ export default function Interview() {
     try {
       const res = await api.post("/interview/start", { role: jobRole });
       const firstQuestion = res.data.question;
+      const sessionId = res.data.sessionId;
 
+      setSessionId(sessionId);
       setMessages([{ sender: "AI", message: firstQuestion, type: "question" }]);
 
       setCurrentQuestion(firstQuestion);
@@ -63,6 +65,7 @@ export default function Interview() {
         role: jobRole,
         answers,
         previousQuestions,
+        sessionId,
       });
 
       showFeedback(res.data.feedback);
@@ -89,6 +92,7 @@ export default function Interview() {
         role: jobRole,
         answers,
         previousQuestions,
+        sessionId,
       });
 
       const updated = [...answers, text];

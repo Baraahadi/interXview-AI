@@ -17,8 +17,18 @@ dotenv.config();
 const app = express();
 
 // Middleware
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://interxview-ai-1.onrender.com",
+];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  }),
+);
 app.use(express.json());
-app.use(cors());
 
 // Routes
 app.use("/api/auth", authRoutes);

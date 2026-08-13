@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
-
+import api from "../api/axiosInstance";
 import Header from "../components/Header";
 import UploadSection from "../components/UploadSection";
 import AnalysisSection from "../components/AnalysisSection";
@@ -27,23 +26,19 @@ export default function CvBoost() {
       setTimeout(() => setStatusMessage("Reading your document..."), 900);
       setTimeout(
         () => setStatusMessage("Extracting important details..."),
-        1900
+        1900,
       );
       setTimeout(
         () => setStatusMessage("Analyzing if this is really a CV..."),
-        3000
+        3000,
       );
       setTimeout(() => setStatusMessage("Almost Done..."), 3800);
 
-      const res = await axios.post(
-        "http://localhost:5000/api/cv-text/extract-text",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      const res = await api.post("/cv-text/extract-text", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       console.log("SERVER RESPONSE:", res.data);
 
