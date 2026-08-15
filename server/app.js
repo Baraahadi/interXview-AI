@@ -19,7 +19,7 @@ const app = express();
 // Middleware
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://interxview-ai-1.onrender.com",
+  "https://interxview-frontend.onrender.com",
 ];
 
 app.use(
